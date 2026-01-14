@@ -46,7 +46,6 @@ const AdminDashboard: React.FC = () => {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [heroPreview, setHeroPreview] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<any>({ 
     title: '', content: '', image_url: '', 
@@ -143,6 +142,20 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!settings) return;
+    setIsSaving(true);
+    try {
+      await settingsService.update(settings);
+      alert("Pengaturan Berhasil Disimpan!");
+    } catch (err) {
+      alert("Gagal menyimpan pengaturan.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -234,7 +247,6 @@ const AdminDashboard: React.FC = () => {
             </div>
         ) : activeTab === 'my_id' ? (
              <div className="flex flex-col items-center justify-center py-20 animate-zoom-in">
-                {/* GLASS CARD */}
                 <div className="w-full max-w-sm relative group">
                    <div className="absolute inset-0 bg-blue-600 rounded-[2.5rem] blur-3xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
                    <div className="relative bg-white/40 backdrop-blur-xl border border-white/40 p-10 rounded-[2.5rem] shadow-2xl overflow-hidden">
@@ -267,33 +279,105 @@ const AdminDashboard: React.FC = () => {
                 </div>
                 <button className="mt-12 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-blue-600 transition-all"><i className="fa-solid fa-download mr-2"></i> Simpan Kartu</button>
              </div>
-        ) : activeTab === 'achievements' ? (
-             <div className="space-y-8 animate-zoom-in">
-                <div className="flex justify-end"><button onClick={() => handleOpenModal(null, 'achievements')} className="px-6 py-3 bg-amber-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-100">+ TAMBAH PRESTASI</button></div>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                   {achievements.map(ach => (
-                     <div key={ach.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 flex flex-col group hover:shadow-2xl transition-all">
-                        <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-xl mb-4"><i className="fa-solid fa-award"></i></div>
-                        <h3 className="text-lg font-black text-slate-900 mb-1">{ach.title}</h3>
-                        <p className="text-xs font-bold text-slate-500 mb-6 uppercase tracking-widest">{ach.rank} - {ach.category}</p>
-                        <div className="mt-auto flex justify-between items-center pt-4 border-t border-slate-50">
-                           <span className="text-[10px] font-black text-slate-300 uppercase">{ach.year}</span>
-                           <button onClick={() => handleDelete(ach.id)} className="text-rose-400 hover:text-rose-600 transition-colors"><i className="fa-solid fa-trash-can"></i></button>
-                        </div>
-                     </div>
-                   ))}
-                </div>
+        ) : activeTab === 'settings' && isAdmin ? (
+             <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100 animate-zoom-in max-w-4xl">
+                <h3 className="text-xl font-black text-slate-900 mb-8 flex items-center gap-3 uppercase tracking-tight">
+                   <div className="w-1.5 h-6 bg-blue-600 rounded-full"></div>
+                   Identitas Website
+                </h3>
+                <form onSubmit={handleSaveSettings} className="space-y-6">
+                   <div className="grid md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nama Sekolah</label>
+                         <input type="text" value={settings?.school_name} onChange={e => setSettings(settings ? {...settings, school_name: e.target.value} : null)} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-600" />
+                      </div>
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Running Info / Teks Iklan</label>
+                         <input type="text" value={settings?.running_text} onChange={e => setSettings(settings ? {...settings, running_text: e.target.value} : null)} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-600" placeholder="Contoh: Fitur Update hari ini jam 10:00..." />
+                      </div>
+                   </div>
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Kalimat Sambutan (Hero Title)</label>
+                      <input type="text" value={settings?.welcome_text} onChange={e => setSettings(settings ? {...settings, welcome_text: e.target.value} : null)} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-600" />
+                   </div>
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Deskripsi Sambutan</label>
+                      <textarea rows={3} value={settings?.sub_welcome_text} onChange={e => setSettings(settings ? {...settings, sub_welcome_text: e.target.value} : null)} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-600" />
+                   </div>
+                   <div className="grid md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">URL Logo Sekolah</label>
+                         <input type="text" value={settings?.logo_url} onChange={e => setSettings(settings ? {...settings, logo_url: e.target.value} : null)} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-blue-600" />
+                      </div>
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">URL Hero Image</label>
+                         <input type="text" value={settings?.hero_image_url} onChange={e => setSettings(settings ? {...settings, hero_image_url: e.target.value} : null)} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-blue-600" />
+                      </div>
+                   </div>
+                   <hr className="border-slate-100 my-8" />
+                   <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3 uppercase tracking-tight">
+                      <div className="w-1.5 h-6 bg-blue-400 rounded-full"></div>
+                      Integrasi Telegram Bot
+                   </h3>
+                   <div className="grid md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Bot Token</label>
+                         <input type="password" value={settings?.telegram_bot_token} onChange={e => setSettings(settings ? {...settings, telegram_bot_token: e.target.value} : null)} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-blue-600" />
+                      </div>
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Admin Chat ID</label>
+                         <input type="text" value={settings?.telegram_chat_id} onChange={e => setSettings(settings ? {...settings, telegram_chat_id: e.target.value} : null)} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-blue-600" />
+                      </div>
+                   </div>
+                   <button type="submit" disabled={isSaving} className="px-10 py-5 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all flex items-center gap-3">
+                      {isSaving ? "MENYIMPAN..." : <>SIMPAN SEMUA PERUBAHAN <i className="fa-solid fa-check"></i></>}
+                   </button>
+                </form>
              </div>
         ) : activeTab === 'users' && isAdmin ? (
              <div className="bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-sm animate-zoom-in">
                 <div className="p-8 border-b border-slate-50 flex justify-between items-center">
-                   <h3 className="text-xl font-black uppercase tracking-tight">Daftar Pengguna</h3>
+                   <h3 className="text-xl font-black uppercase tracking-tight">Database Pengguna</h3>
+                   <div className="px-4 py-2 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest">{users.length} Total Akun</div>
                 </div>
-                <div className="overflow-x-auto"><table className="w-full text-left"><thead><tr className="bg-slate-50"><th className="p-6 text-[10px] font-black uppercase text-slate-400">ID</th><th className="p-6 text-[10px] font-black uppercase text-slate-400">Nama</th><th className="p-6 text-[10px] font-black uppercase text-slate-400">Email</th><th className="p-6 text-[10px] font-black uppercase text-slate-400 text-right">Aksi</th></tr></thead><tbody className="divide-y divide-slate-50">{users.map(u => (<tr key={u.id} className="hover:bg-slate-50/50">
-                    <td className="p-6 font-mono text-[10px] text-slate-400">#{u.student_id}</td>
-                    <td className="p-6 font-bold text-xs">{u.name}</td>
-                    <td className="p-6 font-bold text-xs text-slate-500">{u.email}</td>
-                    <td className="p-6 text-right">{u.email !== 'wilka@smkn2.id' && <button onClick={() => handleDelete(u.id)} className="text-rose-400 hover:text-rose-600"><i className="fa-solid fa-trash-can"></i></button>}</td></tr>))}</tbody></table></div>
+                <div className="overflow-x-auto">
+                   <table className="w-full text-left">
+                      <thead>
+                         <tr className="bg-slate-50">
+                            <th className="p-6 text-[10px] font-black uppercase text-slate-400">ID PELAJAR</th>
+                            <th className="p-6 text-[10px] font-black uppercase text-slate-400">NAMA LENGKAP</th>
+                            <th className="p-6 text-[10px] font-black uppercase text-slate-400">EMAIL AKSES</th>
+                            <th className="p-6 text-[10px] font-black uppercase text-slate-400">ROLE</th>
+                            <th className="p-6 text-[10px] font-black uppercase text-slate-400 text-right">AKSI</th>
+                         </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                         {/* Tambahkan User Admin Secara Visual jika daftar kosong */}
+                         {users.length === 0 && (
+                            <tr className="hover:bg-slate-50/50">
+                               <td className="p-6 font-mono text-[10px] text-slate-400">#SUPER-ADMIN</td>
+                               <td className="p-6 font-bold text-xs">WilkaXyz</td>
+                               <td className="p-6 font-bold text-xs text-slate-500">wilka@smkn2.id</td>
+                               <td className="p-6"><span className="bg-blue-600 text-white text-[9px] px-2 py-0.5 rounded font-black">ADMIN</span></td>
+                               <td className="p-6 text-right opacity-20"><i className="fa-solid fa-lock"></i></td>
+                            </tr>
+                         )}
+                         {users.map(u => (
+                            <tr key={u.id} className="hover:bg-slate-50/50">
+                               <td className="p-6 font-mono text-[10px] text-slate-400">#{u.student_id}</td>
+                               <td className="p-6 font-bold text-xs">{u.name}</td>
+                               <td className="p-6 font-bold text-xs text-slate-500">{u.email}</td>
+                               <td className="p-6"><span className={`text-[9px] px-2 py-0.5 rounded font-black ${u.role === 'admin' ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'}`}>{u.role.toUpperCase()}</span></td>
+                               <td className="p-6 text-right">
+                                  {u.email !== 'wilka@smkn2.id' && (
+                                     <button onClick={() => handleDelete(u.id)} className="text-rose-400 hover:text-rose-600 p-2"><i className="fa-solid fa-trash-can"></i></button>
+                                  )}
+                               </td>
+                            </tr>
+                         ))}
+                      </tbody>
+                   </table>
+                </div>
              </div>
         ) : (
              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 animate-zoom-in">
@@ -320,20 +404,20 @@ const AdminDashboard: React.FC = () => {
              <form onSubmit={handleSave} className="space-y-5">
                 {formType === 'achievements' ? (
                    <>
-                    <input type="text" placeholder="Judul Prestasi" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full px-6 py-4 bg-slate-50 rounded-2xl font-bold text-sm" required />
+                    <input type="text" placeholder="Judul Prestasi" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full px-6 py-4 bg-slate-50 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-600" required />
                     <div className="grid grid-cols-2 gap-4">
-                       <input type="text" placeholder="Juara (Misal: Juara 1)" value={formData.rank} onChange={e => setFormData({...formData, rank: e.target.value})} className="w-full px-6 py-4 bg-slate-50 rounded-2xl text-xs" />
-                       <input type="text" placeholder="Kategori (Misal: LKS)" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full px-6 py-4 bg-slate-50 rounded-2xl text-xs" />
+                       <input type="text" placeholder="Juara (Misal: Juara 1)" value={formData.rank} onChange={e => setFormData({...formData, rank: e.target.value})} className="w-full px-6 py-4 bg-slate-50 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-blue-600" />
+                       <input type="text" placeholder="Kategori (Misal: LKS)" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full px-6 py-4 bg-slate-50 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-blue-600" />
                     </div>
                    </>
                 ) : (
                   <>
-                    <input type="text" placeholder="Judul / Nama" value={formData.title || formData.name} onChange={e => setFormData({...formData, title: e.target.value, name: e.target.value})} className="w-full px-6 py-4 bg-slate-50 rounded-2xl font-bold text-sm" required />
-                    <textarea placeholder="Isi / Deskripsi" rows={4} value={formData.content || formData.description} onChange={e => setFormData({...formData, content: e.target.value, description: e.target.value})} className="w-full px-6 py-4 bg-slate-50 rounded-2xl text-sm" />
+                    <input type="text" placeholder="Judul / Nama" value={formData.title || formData.name} onChange={e => setFormData({...formData, title: e.target.value, name: e.target.value})} className="w-full px-6 py-4 bg-slate-50 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-600" required />
+                    <textarea placeholder="Isi / Deskripsi" rows={4} value={formData.content || formData.description} onChange={e => setFormData({...formData, content: e.target.value, description: e.target.value})} className="w-full px-6 py-4 bg-slate-50 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-600" />
                   </>
                 )}
                 <div className="flex gap-4 pt-6">
-                   <button type="submit" disabled={isSaving} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest">{isSaving ? "MEMPROSES..." : "SIMPAN DATA"}</button>
+                   <button type="submit" disabled={isSaving} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-100">{isSaving ? "MEMPROSES..." : "SIMPAN DATA"}</button>
                 </div>
              </form>
            </div>
