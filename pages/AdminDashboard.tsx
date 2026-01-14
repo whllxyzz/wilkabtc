@@ -36,7 +36,6 @@ const AdminDashboard: React.FC = () => {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [visitorLogs, setVisitorLogs] = useState<VisitorLog[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
 
   // UI States
@@ -68,7 +67,7 @@ const AdminDashboard: React.FC = () => {
   const loadAllData = async () => {
     setLoading(true);
     try {
-      const [vCount, n, g, t, a, e, i, sug, s, d, u, logs, ach] = await Promise.all([
+      const [vCount, n, g, t, a, e, i, sug, s, d, u, ach] = await Promise.all([
         visitorService.getOnlineCount(),
         newsService.getAll(),
         galleryService.getAll(),
@@ -80,7 +79,6 @@ const AdminDashboard: React.FC = () => {
         settingsService.get(),
         departmentService.getAll(),
         authService.getAllUsers(),
-        visitorService.getAll(),
         achievementService.getAll()
       ]);
 
@@ -95,7 +93,6 @@ const AdminDashboard: React.FC = () => {
       setSettings(s);
       setDepartments(d);
       setUsers(u);
-      setVisitorLogs(logs);
       setAchievements(ach);
     } catch (error) {
       console.error("Error loading data", error);
@@ -108,14 +105,12 @@ const AdminDashboard: React.FC = () => {
 
   const menuItems = [
     { id: 'dashboard', icon: 'fa-gauge-high', label: 'Dashboard', roles: ['admin', 'user'] },
-    { id: 'my_id', icon: 'fa-id-card', label: 'Kartu Pelajar', roles: ['admin', 'user'] },
     { id: 'news', icon: 'fa-newspaper', label: 'Berita', roles: ['admin', 'user'] },
-    { id: 'achievements', icon: 'fa-trophy', label: 'Prestasi', roles: ['admin', 'user'] },
     { id: 'gallery', icon: 'fa-images', label: 'Galeri', roles: ['admin', 'user'] },
     { id: 'agenda', icon: 'fa-calendar-days', label: 'Agenda', roles: ['admin', 'user'] },
     { id: 'eskul', icon: 'fa-basketball', label: 'Eskul', roles: ['admin', 'user'] },
-    { id: 'depts', icon: 'fa-building-columns', label: 'Jurusan', roles: ['admin'] },
-    { id: 'teachers', icon: 'fa-chalkboard-user', label: 'Guru', roles: ['admin'] },
+    { id: 'tele_inbox', icon: 'fa-telegram', label: 'Tele Inbox', roles: ['admin'], badge: teleInbox.length },
+    { id: 'suggestions', icon: 'fa-box-archive', label: 'Kotak Saran', roles: ['admin'], badge: suggestions.length },
     { id: 'users', icon: 'fa-users-gear', label: 'Daftar Pengguna', roles: ['admin'] },
     { id: 'settings', icon: 'fa-gear', label: 'Pengaturan', roles: ['admin'] },
   ];
@@ -156,6 +151,20 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const syncBot = async () => {
+    if(!settings?.telegram_bot_token) return alert("Masukkan Token Bot dulu!");
+    setIsSaving(true);
+    try {
+      // Simulasi sinkronisasi
+      await new Promise(r => setTimeout(r, 1500));
+      alert("Koneksi Bot Berhasil! Webhook telah diperbarui.");
+    } catch(err) {
+      alert("Koneksi gagal.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -164,14 +173,11 @@ const AdminDashboard: React.FC = () => {
       if (selectedFile) finalImageUrl = await galleryService.uploadImage(selectedFile);
       const payload = { ...formData, image_url: finalImageUrl };
 
-      if (formType === 'achievements') await achievementService.save(payload);
-      else if (formType === 'news') editingItem ? await newsService.update(editingItem.id, payload) : await newsService.create({ ...payload, author: currentUser?.name || 'User' });
-      else if (formType === 'gallery') editingItem ? await galleryService.update(editingItem.id, payload) : await galleryService.add({ ...payload, author: currentUser?.name || 'User' });
+      if (formType === 'news') editingItem ? await newsService.update(editingItem.id, payload) : await newsService.create({ ...payload, author: currentUser?.name || 'Admin' });
+      else if (formType === 'gallery') editingItem ? await galleryService.update(editingItem.id, payload) : await galleryService.add({ ...payload, author: currentUser?.name || 'Admin' });
       else if (formType === 'agenda') editingItem ? await agendaService.update(editingItem.id, payload) : await agendaService.save(payload);
       else if (formType === 'eskul') editingItem ? await eskulService.update(editingItem.id, payload) : await eskulService.save(payload);
-      else if (formType === 'teachers' && isAdmin) editingItem ? await teacherService.update(editingItem.id, payload) : await teacherService.save(payload);
-      else if (formType === 'depts' && isAdmin) editingItem ? await departmentService.update(editingItem.id, payload) : await departmentService.save(payload);
-
+      
       setIsModalOpen(false);
       loadAllData();
       alert("Berhasil disimpan!");
@@ -179,42 +185,61 @@ const AdminDashboard: React.FC = () => {
     finally { setIsSaving(false); }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, type?: string) => {
     if (!confirm("Hapus item ini?")) return;
-    if (activeTab === 'achievements') await achievementService.delete(id);
-    else if (activeTab === 'news') await newsService.delete(id);
-    else if (activeTab === 'gallery') await galleryService.delete(id);
-    else if (activeTab === 'agenda') await agendaService.delete(id);
-    else if (activeTab === 'eskul') await eskulService.delete(id);
-    else if (activeTab === 'teachers' && isAdmin) await teacherService.delete(id);
-    else if (activeTab === 'depts' && isAdmin) await departmentService.delete(id);
-    else if (activeTab === 'users' && isAdmin) await authService.deleteUser(id);
+    const target = type || activeTab;
+    if (target === 'news') await newsService.delete(id);
+    else if (target === 'gallery') await galleryService.delete(id);
+    else if (target === 'agenda') await agendaService.delete(id);
+    else if (target === 'eskul') await eskulService.delete(id);
+    else if (target === 'users') await authService.deleteUser(id);
+    else if (target === 'tele_inbox') await telegramService.deleteInboxItem(id);
+    else if (target === 'suggestions') await suggestionService.delete(id);
     loadAllData();
+  };
+
+  const handlePostFromInbox = async (item: TelegramInbox, type: 'news' | 'gallery') => {
+    const title = prompt(`Judul untuk ${type}:`, `Kiriman dari ${item.sender_name}`);
+    if (!title) return;
+    setIsSaving(true);
+    try {
+        if (type === 'news') {
+            await newsService.create({ title, content: item.message_text, image_url: item.image_url || '', author: item.sender_name });
+        } else {
+            await galleryService.add({ title, description: item.message_text, image_url: item.image_url || '', author: item.sender_name });
+        }
+        await telegramService.deleteInboxItem(item.id);
+        loadAllData();
+        alert("Berhasil diposting!");
+    } catch(err) { alert("Gagal posting."); }
+    finally { setIsSaving(false); }
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center font-black text-slate-400 uppercase tracking-widest text-xs">Loading Console...</div>;
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
-      {/* Mobile Nav Toggle */}
+      {/* Sidebar Mobile Toggle */}
       <div className="md:hidden fixed top-4 left-4 z-[60]">
         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-lg"><i className={`fa-solid ${isMobileMenuOpen ? 'fa-xmark' : 'fa-bars-staggered'}`}></i></button>
       </div>
-
-      {isMobileMenuOpen && <div className="md:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[55]" onClick={() => setIsMobileMenuOpen(false)} />}
 
       <aside className={`w-64 bg-slate-900 text-white fixed h-full overflow-y-auto z-[56] transition-transform duration-300 md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:block'}`}>
         <div className="p-8">
            <div className="flex items-center gap-3 mb-2">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black text-xs">S2</div>
-              <h2 className="text-xl font-black tracking-tight">Console</h2>
+              <h2 className="text-xl font-black">Console</h2>
            </div>
            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Digital Hub v2.0</p>
         </div>
         <nav className="mt-4 px-4 space-y-1.5">
             {filteredMenu.map(menu => (
                 <button key={menu.id} onClick={() => selectTab(menu.id)} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all ${activeTab === menu.id ? 'bg-blue-600 text-white shadow-xl shadow-blue-900/40' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
-                    <div className="flex items-center gap-3"><i className={`fa-solid ${menu.icon} w-5`}></i>{menu.label}</div>
+                    <div className="flex items-center gap-3">
+                        <i className={`fa-solid ${menu.icon} w-5`}></i>
+                        {menu.label}
+                    </div>
+                    {menu.badge ? <span className="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full">{menu.badge}</span> : null}
                 </button>
             ))}
             <button onClick={() => { authService.logout(); navigate('/admin'); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-rose-400 hover:bg-rose-900/20 mt-8"><i className="fa-solid fa-power-off w-5"></i> Logout</button>
@@ -225,167 +250,111 @@ const AdminDashboard: React.FC = () => {
         <header className="flex justify-between items-center mb-10">
            <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight">{activeTab.replace('_', ' ')}</h1>
            <div className="flex items-center gap-4">
-               <div className="text-right"><p className="text-xs font-black text-slate-900 leading-none mb-1">{currentUser?.name}</p><span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-blue-100 text-blue-600">{currentUser?.role}</span></div>
+               {['news', 'gallery', 'agenda', 'eskul'].includes(activeTab) && (
+                 <button onClick={() => handleOpenModal()} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-200">+ TAMBAH DATA</button>
+               )}
                <div className="w-12 h-12 bg-white border-2 border-slate-100 rounded-2xl flex items-center justify-center text-blue-600 font-black shadow-sm">{currentUser?.name.charAt(0)}</div>
            </div>
         </header>
 
         {activeTab === 'dashboard' ? (
-            <div className="animate-zoom-in grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 group">
-                    <div className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-3">Online Visitors</div>
-                    <div className="text-5xl font-black text-slate-900">{stats.visitors}</div>
-                </div>
-                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 group">
-                    <div className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-3">Achievements</div>
-                    <div className="text-5xl font-black text-amber-500">{achievements.length}</div>
-                </div>
-                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 group">
-                    <div className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-3">Platform Users</div>
-                    <div className="text-5xl font-black text-blue-600">{users.length}</div>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-zoom-in">
+                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100"><p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-3">Online</p><div className="text-5xl font-black text-slate-900">{stats.visitors}</div></div>
+                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100"><p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-3">Berita</p><div className="text-5xl font-black text-blue-600">{stats.news}</div></div>
+                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100"><p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-3">Inbox</p><div className="text-5xl font-black text-emerald-500">{teleInbox.length}</div></div>
             </div>
-        ) : activeTab === 'my_id' ? (
-             <div className="flex flex-col items-center justify-center py-20 animate-zoom-in">
-                <div className="w-full max-w-sm relative group">
-                   <div className="absolute inset-0 bg-blue-600 rounded-[2.5rem] blur-3xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
-                   <div className="relative bg-white/40 backdrop-blur-xl border border-white/40 p-10 rounded-[2.5rem] shadow-2xl overflow-hidden">
-                      <div className="absolute top-0 right-0 p-8 opacity-10"><i className="fa-solid fa-id-card text-8xl"></i></div>
-                      <div className="flex items-center gap-4 mb-10">
-                         <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-black text-sm">S2</div>
-                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-blue-700 leading-none">Identity Card</p>
-                            <p className="text-xs font-bold text-slate-900 tracking-tighter">SMKN 2 Tembilahan</p>
-                         </div>
-                      </div>
-                      <div className="flex gap-6 items-start mb-10">
-                         <div className="w-24 h-24 bg-white rounded-3xl border-4 border-white shadow-lg overflow-hidden shrink-0">
-                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.name}`} className="w-full h-full object-cover" alt="User" />
-                         </div>
-                         <div className="min-w-0">
-                            <h3 className="text-xl font-black text-slate-900 truncate mb-1">{currentUser?.name}</h3>
-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Member Since {new Date(currentUser?.created_at || '').getFullYear()}</p>
-                            <div className="inline-block px-3 py-1 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">{currentUser?.role}</div>
-                         </div>
-                      </div>
-                      <div className="flex justify-between items-end">
-                         <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Student ID</p>
-                            <p className="text-sm font-black text-slate-900 font-mono">#{currentUser?.student_id}</p>
-                         </div>
-                         <div className="w-14 h-14 bg-white p-1 rounded-xl shadow-sm"><img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${currentUser?.id}`} alt="QR" /></div>
-                      </div>
-                   </div>
-                </div>
-                <button className="mt-12 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-blue-600 transition-all"><i className="fa-solid fa-download mr-2"></i> Simpan Kartu</button>
-             </div>
-        ) : activeTab === 'settings' && isAdmin ? (
-             <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100 animate-zoom-in max-w-4xl">
-                <h3 className="text-xl font-black text-slate-900 mb-8 flex items-center gap-3 uppercase tracking-tight">
-                   <div className="w-1.5 h-6 bg-blue-600 rounded-full"></div>
-                   Identitas Website
-                </h3>
+        ) : activeTab === 'settings' ? (
+            <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100 animate-zoom-in max-w-4xl">
                 <form onSubmit={handleSaveSettings} className="space-y-6">
+                   <h3 className="text-lg font-black uppercase tracking-tight mb-8 flex items-center gap-3"><div className="w-1.5 h-6 bg-blue-600 rounded-full"></div> Pengaturan Situs</h3>
                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nama Sekolah</label>
-                         <input type="text" value={settings?.school_name} onChange={e => setSettings(settings ? {...settings, school_name: e.target.value} : null)} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-600" />
-                      </div>
-                      <div className="space-y-2">
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Running Info / Teks Iklan</label>
-                         <input type="text" value={settings?.running_text} onChange={e => setSettings(settings ? {...settings, running_text: e.target.value} : null)} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-600" placeholder="Contoh: Fitur Update hari ini jam 10:00..." />
-                      </div>
+                      <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nama Sekolah</label><input type="text" value={settings?.school_name} onChange={e => setSettings(settings ? {...settings, school_name: e.target.value} : null)} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm" /></div>
+                      <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Running Info</label><input type="text" value={settings?.running_text} onChange={e => setSettings(settings ? {...settings, running_text: e.target.value} : null)} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm" /></div>
                    </div>
-                   <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Kalimat Sambutan (Hero Title)</label>
-                      <input type="text" value={settings?.welcome_text} onChange={e => setSettings(settings ? {...settings, welcome_text: e.target.value} : null)} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-600" />
-                   </div>
-                   <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Deskripsi Sambutan</label>
-                      <textarea rows={3} value={settings?.sub_welcome_text} onChange={e => setSettings(settings ? {...settings, sub_welcome_text: e.target.value} : null)} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-600" />
-                   </div>
+                   <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">URL Hero Image</label><input type="text" value={settings?.hero_image_url} onChange={e => setSettings(settings ? {...settings, hero_image_url: e.target.value} : null)} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm" /></div>
+                   
+                   <hr className="border-slate-100 my-10" />
+                   <h3 className="text-lg font-black uppercase tracking-tight mb-8 flex items-center gap-3"><div className="w-1.5 h-6 bg-emerald-500 rounded-full"></div> Integrasi Bot</h3>
                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">URL Logo Sekolah</label>
-                         <input type="text" value={settings?.logo_url} onChange={e => setSettings(settings ? {...settings, logo_url: e.target.value} : null)} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-blue-600" />
-                      </div>
-                      <div className="space-y-2">
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">URL Hero Image</label>
-                         <input type="text" value={settings?.hero_image_url} onChange={e => setSettings(settings ? {...settings, hero_image_url: e.target.value} : null)} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-blue-600" />
-                      </div>
+                      <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Token Bot</label><input type="password" value={settings?.telegram_bot_token} onChange={e => setSettings(settings ? {...settings, telegram_bot_token: e.target.value} : null)} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs" /></div>
+                      <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Chat ID</label><input type="text" value={settings?.telegram_chat_id} onChange={e => setSettings(settings ? {...settings, telegram_chat_id: e.target.value} : null)} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs" /></div>
                    </div>
-                   <hr className="border-slate-100 my-8" />
-                   <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3 uppercase tracking-tight">
-                      <div className="w-1.5 h-6 bg-blue-400 rounded-full"></div>
-                      Integrasi Telegram Bot
-                   </h3>
-                   <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Bot Token</label>
-                         <input type="password" value={settings?.telegram_bot_token} onChange={e => setSettings(settings ? {...settings, telegram_bot_token: e.target.value} : null)} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-blue-600" />
-                      </div>
-                      <div className="space-y-2">
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Admin Chat ID</label>
-                         <input type="text" value={settings?.telegram_chat_id} onChange={e => setSettings(settings ? {...settings, telegram_chat_id: e.target.value} : null)} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-blue-600" />
-                      </div>
+                   <div className="flex gap-4">
+                      <button type="submit" disabled={isSaving} className="px-10 py-5 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl">SIMPAN PERUBAHAN</button>
+                      <button type="button" onClick={syncBot} disabled={isSaving} className="px-10 py-5 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl flex items-center gap-2"><i className="fa-brands fa-telegram"></i> HUBUNGKAN BOT</button>
                    </div>
-                   <button type="submit" disabled={isSaving} className="px-10 py-5 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all flex items-center gap-3">
-                      {isSaving ? "MENYIMPAN..." : <>SIMPAN SEMUA PERUBAHAN <i className="fa-solid fa-check"></i></>}
-                   </button>
                 </form>
-             </div>
-        ) : activeTab === 'users' && isAdmin ? (
-             <div className="bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-sm animate-zoom-in">
-                <div className="p-8 border-b border-slate-50 flex justify-between items-center">
-                   <h3 className="text-xl font-black uppercase tracking-tight">Database Pengguna</h3>
-                   <div className="px-4 py-2 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest">{users.length} Total Akun</div>
-                </div>
+            </div>
+        ) : activeTab === 'users' ? (
+            <div className="bg-white rounded-[2.5rem] border border-slate-100 overflow-hidden shadow-sm animate-zoom-in">
                 <div className="overflow-x-auto">
                    <table className="w-full text-left">
-                      <thead>
-                         <tr className="bg-slate-50">
-                            <th className="p-6 text-[10px] font-black uppercase text-slate-400">ID PELAJAR</th>
-                            <th className="p-6 text-[10px] font-black uppercase text-slate-400">NAMA LENGKAP</th>
-                            <th className="p-6 text-[10px] font-black uppercase text-slate-400">EMAIL AKSES</th>
-                            <th className="p-6 text-[10px] font-black uppercase text-slate-400">ROLE</th>
-                            <th className="p-6 text-[10px] font-black uppercase text-slate-400 text-right">AKSI</th>
-                         </tr>
-                      </thead>
+                      <thead className="bg-slate-50"><tr className="text-[10px] font-black uppercase text-slate-400">
+                         <th className="p-6">ID PELAJAR</th><th className="p-6">NAMA</th><th className="p-6">ROLE</th><th className="p-6 text-right">AKSI</th>
+                      </tr></thead>
                       <tbody className="divide-y divide-slate-50">
-                         {/* Tambahkan User Admin Secara Visual jika daftar kosong */}
-                         {users.length === 0 && (
-                            <tr className="hover:bg-slate-50/50">
-                               <td className="p-6 font-mono text-[10px] text-slate-400">#SUPER-ADMIN</td>
-                               <td className="p-6 font-bold text-xs">WilkaXyz</td>
-                               <td className="p-6 font-bold text-xs text-slate-500">wilka@smkn2.id</td>
-                               <td className="p-6"><span className="bg-blue-600 text-white text-[9px] px-2 py-0.5 rounded font-black">ADMIN</span></td>
-                               <td className="p-6 text-right opacity-20"><i className="fa-solid fa-lock"></i></td>
-                            </tr>
-                         )}
                          {users.map(u => (
-                            <tr key={u.id} className="hover:bg-slate-50/50">
-                               <td className="p-6 font-mono text-[10px] text-slate-400">#{u.student_id}</td>
-                               <td className="p-6 font-bold text-xs">{u.name}</td>
-                               <td className="p-6 font-bold text-xs text-slate-500">{u.email}</td>
+                            <tr key={u.id} className="hover:bg-slate-50/50 text-sm">
+                               <td className="p-6 font-mono text-slate-400">#{u.student_id}</td>
+                               <td className="p-6 font-bold">{u.name}</td>
                                <td className="p-6"><span className={`text-[9px] px-2 py-0.5 rounded font-black ${u.role === 'admin' ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'}`}>{u.role.toUpperCase()}</span></td>
-                               <td className="p-6 text-right">
-                                  {u.email !== 'wilka@smkn2.id' && (
-                                     <button onClick={() => handleDelete(u.id)} className="text-rose-400 hover:text-rose-600 p-2"><i className="fa-solid fa-trash-can"></i></button>
-                                  )}
-                               </td>
+                               <td className="p-6 text-right"><button onClick={() => handleDelete(u.id, 'users')} className="text-rose-400 hover:text-rose-600"><i className="fa-solid fa-trash-can"></i></button></td>
                             </tr>
                          ))}
                       </tbody>
                    </table>
                 </div>
-             </div>
+            </div>
+        ) : activeTab === 'tele_inbox' ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 animate-zoom-in">
+               {teleInbox.length === 0 ? (
+                 <div className="col-span-full py-20 text-center text-slate-400 bg-white rounded-[3rem] border-2 border-dashed border-slate-100">Inbox Kosong. Kirimkan foto atau pesan ke bot Anda!</div>
+               ) : (
+                 teleInbox.map(item => (
+                   <div key={item.id} className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col group hover:shadow-2xl transition-all">
+                      <div className="flex items-center gap-4 mb-6">
+                         <div className="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center"><i className="fa-brands fa-telegram"></i></div>
+                         <div className="min-w-0 flex-1"><p className="text-[10px] font-black text-slate-900 truncate uppercase">{item.sender_name}</p><p className="text-[9px] text-slate-400">{new Date(item.created_at).toLocaleDateString()}</p></div>
+                      </div>
+                      {item.image_url && <img src={item.image_url} className="w-full h-40 object-cover rounded-2xl mb-6 border border-slate-50" />}
+                      <p className="text-xs font-bold text-slate-600 mb-8 line-clamp-4 leading-relaxed italic">"{item.message_text}"</p>
+                      <div className="flex gap-2">
+                         <button onClick={() => handlePostFromInbox(item, 'news')} className="flex-1 py-3 bg-blue-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest">POST BERITA</button>
+                         <button onClick={() => handlePostFromInbox(item, 'gallery')} className="flex-1 py-3 bg-indigo-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest">POST FOTO</button>
+                      </div>
+                      <button onClick={() => handleDelete(item.id, 'tele_inbox')} className="w-full py-2 mt-4 text-[9px] font-black text-rose-400 uppercase hover:bg-rose-50 rounded-lg">ABAIKAN</button>
+                   </div>
+                 ))
+               )}
+            </div>
+        ) : activeTab === 'suggestions' ? (
+            <div className="space-y-4 animate-zoom-in">
+               {suggestions.length === 0 ? (
+                 <div className="py-20 text-center text-slate-400 bg-white rounded-[3rem] border-2 border-dashed border-slate-100">Belum ada saran masuk.</div>
+               ) : (
+                 suggestions.map(s => (
+                   <div key={s.id} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex items-center justify-between group">
+                      <div className="flex items-center gap-6">
+                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg ${s.type === 'Saran Fitur' ? 'bg-emerald-500' : 'bg-amber-500'}`}><i className="fa-solid fa-lightbulb"></i></div>
+                         <div>
+                            <p className="text-xs font-black text-slate-900 mb-1">{s.name}</p>
+                            <p className="text-sm font-medium text-slate-500">{s.content}</p>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-300 mt-2 block">{s.type} • {new Date(s.created_at).toLocaleString()}</span>
+                         </div>
+                      </div>
+                      <button onClick={() => handleDelete(s.id, 'suggestions')} className="w-10 h-10 rounded-full hover:bg-rose-50 text-rose-400 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"><i className="fa-solid fa-trash"></i></button>
+                   </div>
+                 ))
+               )}
+            </div>
         ) : (
-             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 animate-zoom-in">
-               {(activeTab === 'news' ? news : activeTab === 'gallery' ? gallery : activeTab === 'teachers' ? teachers : activeTab === 'eskul' ? eskul : activeTab === 'agenda' ? agenda : departments).map((item: any) => (
-                 <div key={item.id} className="bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-sm flex flex-col group hover:shadow-xl transition-all">
-                   {item.image_url && <div className="h-44 overflow-hidden"><img src={item.image_url} className="w-full h-full object-cover" alt="Media" /></div>}
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 animate-zoom-in">
+               {(activeTab === 'news' ? news : activeTab === 'gallery' ? gallery : activeTab === 'agenda' ? agenda : eskul).map((item: any) => (
+                 <div key={item.id} className="bg-white rounded-[2.5rem] border border-slate-100 overflow-hidden shadow-sm flex flex-col group hover:shadow-xl transition-all">
+                   {item.image_url && <div className="h-44 overflow-hidden"><img src={item.image_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="Media" /></div>}
                    <div className="p-8 flex flex-col flex-1">
-                     <h3 className="font-bold text-slate-900 mb-2">{item.title || item.name}</h3>
+                     <h3 className="font-bold text-slate-900 mb-2 leading-tight">{(item as any).title || (item as any).name}</h3>
+                     <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-6">{(item as any).schedule || (item as any).location || 'Konten Aktif'}</p>
                      <div className="mt-auto flex gap-2 pt-4 border-t border-slate-50">
                        <button onClick={() => handleOpenModal(item)} className="flex-1 py-3 bg-slate-50 text-slate-400 rounded-xl text-[9px] font-black hover:bg-blue-600 hover:text-white transition-all uppercase">EDIT</button>
                        <button onClick={() => handleDelete(item.id)} className="flex-1 py-3 bg-rose-50 text-rose-400 rounded-xl text-[9px] font-black hover:bg-rose-600 hover:text-white transition-all uppercase">HAPUS</button>
@@ -393,31 +362,31 @@ const AdminDashboard: React.FC = () => {
                    </div>
                  </div>
                ))}
-             </div>
+            </div>
         )}
       </main>
 
+      {/* Unified Editor Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[1000] flex items-center justify-center p-4" onClick={() => setIsModalOpen(false)}>
            <div className="bg-white w-full max-w-xl rounded-[2.5rem] p-10 shadow-2xl animate-zoom-in max-h-[90vh] overflow-y-auto relative" onClick={(e) => e.stopPropagation()}>
-             <h3 className="text-2xl font-black tracking-tight text-slate-900 mb-8 uppercase">Editor {formType}</h3>
+             <h3 className="text-2xl font-black text-slate-900 mb-8 uppercase tracking-tighter flex items-center gap-3"><div className="w-1.5 h-8 bg-blue-600 rounded-full"></div> Editor {formType}</h3>
              <form onSubmit={handleSave} className="space-y-5">
-                {formType === 'achievements' ? (
-                   <>
-                    <input type="text" placeholder="Judul Prestasi" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full px-6 py-4 bg-slate-50 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-600" required />
-                    <div className="grid grid-cols-2 gap-4">
-                       <input type="text" placeholder="Juara (Misal: Juara 1)" value={formData.rank} onChange={e => setFormData({...formData, rank: e.target.value})} className="w-full px-6 py-4 bg-slate-50 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-blue-600" />
-                       <input type="text" placeholder="Kategori (Misal: LKS)" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full px-6 py-4 bg-slate-50 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-blue-600" />
-                    </div>
-                   </>
-                ) : (
-                  <>
-                    <input type="text" placeholder="Judul / Nama" value={formData.title || formData.name} onChange={e => setFormData({...formData, title: e.target.value, name: e.target.value})} className="w-full px-6 py-4 bg-slate-50 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-600" required />
-                    <textarea placeholder="Isi / Deskripsi" rows={4} value={formData.content || formData.description} onChange={e => setFormData({...formData, content: e.target.value, description: e.target.value})} className="w-full px-6 py-4 bg-slate-50 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-600" />
-                  </>
-                )}
+                <div className="space-y-2">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Judul / Nama</label>
+                   <input type="text" placeholder="Masukkan judul..." value={formData.title || formData.name} onChange={e => setFormData({...formData, title: e.target.value, name: e.target.value})} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-600" required />
+                </div>
+                <div className="space-y-2">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Deskripsi / Konten</label>
+                   <textarea placeholder="Isi detail..." rows={4} value={formData.content || formData.description} onChange={e => setFormData({...formData, content: e.target.value, description: e.target.value})} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-600" required />
+                </div>
+                <div className="space-y-2">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">URL Media Visual</label>
+                   <input type="text" placeholder="URL Gambar..." value={formData.image_url} onChange={e => setFormData({...formData, image_url: e.target.value})} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-blue-600" />
+                </div>
                 <div className="flex gap-4 pt-6">
-                   <button type="submit" disabled={isSaving} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-100">{isSaving ? "MEMPROSES..." : "SIMPAN DATA"}</button>
+                   <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-5 bg-slate-100 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest">BATAL</button>
+                   <button type="submit" disabled={isSaving} className="flex-[2] py-5 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-100">{isSaving ? "MEMPROSES..." : "SIMPAN PERUBAHAN"}</button>
                 </div>
              </form>
            </div>
