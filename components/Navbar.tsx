@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { authService, settingsService } from '../services/supabaseService';
@@ -28,8 +29,8 @@ const Navbar: React.FC = () => {
   const navLinks = [
     { name: 'Beranda', path: '/', icon: 'fa-house' },
     { name: 'Profil', path: '/profile', icon: 'fa-building-columns' },
-    { name: 'Jurusan', path: '/departments', icon: 'fa-briefcase' }, // Changed link for future use
     { name: 'Berita', path: '/news', icon: 'fa-newspaper' },
+    { name: 'AI Matcher', path: '/matcher', icon: 'fa-wand-magic-sparkles' },
     { name: 'Agenda', path: '/agenda', icon: 'fa-calendar-days' },
     { name: 'Kontak', path: '/contact', icon: 'fa-address-book' },
   ];
@@ -53,7 +54,6 @@ const Navbar: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-14">
           
-          {/* Logo Section */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center gap-3 group">
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg transition-transform group-hover:scale-105 ${logoUrl ? 'bg-transparent' : 'bg-brand-600'}`}>
@@ -66,7 +66,6 @@ const Navbar: React.FC = () => {
             </Link>
           </div>
 
-          {/* Desktop Menu */}
           <div className="hidden lg:flex items-center gap-1">
             {navLinks.map((link) => (
               <Link
@@ -100,7 +99,6 @@ const Navbar: React.FC = () => {
             )}
           </div>
 
-          {/* Mobile Toggle */}
           <div className="lg:hidden">
             <button
               onClick={() => setIsOpen(!isOpen)}
@@ -112,7 +110,6 @@ const Navbar: React.FC = () => {
         </div>
       </div>
 
-      {/* Mobile Menu */}
       <div className={`lg:hidden absolute top-full left-0 right-0 bg-white border-t border-slate-100 shadow-xl transition-all duration-300 origin-top ${
         isOpen ? 'scale-y-100 opacity-100' : 'scale-y-0 opacity-0 pointer-events-none'
       }`}>

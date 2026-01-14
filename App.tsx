@@ -15,8 +15,10 @@ import ChatRoom from './pages/ChatRoom';
 import Teachers from './pages/Teachers';
 import Agenda from './pages/Agenda';
 import EskulPage from './pages/Eskul';
+import MajorMatcher from './pages/MajorMatcher';
 import AIChatbot from './components/AIChatbot';
 import FeedbackWidget from './components/FeedbackWidget';
+import AnnouncementAd from './components/AnnouncementAd'; // Import baru
 import { visitorService } from './services/supabaseService';
 
 const App: React.FC = () => {
@@ -54,14 +56,11 @@ const App: React.FC = () => {
         if (ua.indexOf("Chrome") > -1) browser = "Google Chrome";
         else if (ua.indexOf("Safari") > -1) browser = "Safari";
         else if (ua.indexOf("Firefox") > -1) browser = "Mozilla Firefox";
-        else if (ua.indexOf("MSIE") > -1 || !!(document as any).documentMode) browser = "IE";
         
         // OS Detection
         let os = 'Unknown OS';
         if (ua.indexOf("Win") !== -1) os = "Windows";
         if (ua.indexOf("Mac") !== -1) os = "MacOS";
-        if (ua.indexOf("X11") !== -1) os = "UNIX";
-        if (ua.indexOf("Linux") !== -1) os = "Linux";
         if (/android/i.test(ua)) os = "Android";
         if (/iPhone|iPad|iPod/i.test(ua)) os = "iOS";
 
@@ -92,12 +91,12 @@ const App: React.FC = () => {
           <Route path="/eskul" element={<Layout><EskulPage /></Layout>} />
           <Route path="/contact" element={<Layout><Contact /></Layout>} />
           <Route path="/chat" element={<Layout><ChatRoom /></Layout>} />
+          <Route path="/matcher" element={<Layout><MajorMatcher /></Layout>} />
+          
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/register" element={<Register />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
         </Routes>
-        <AIChatbot />
-        <FeedbackWidget />
       </div>
     </Router>
   );
@@ -106,8 +105,11 @@ const App: React.FC = () => {
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <>
     <Navbar />
+    <AnnouncementAd /> {/* Letakkan di sini agar muncul saat halaman dimuat */}
     <main className="flex-grow">{children}</main>
     <Footer />
+    <AIChatbot />
+    <FeedbackWidget />
   </>
 );
 

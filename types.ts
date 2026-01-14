@@ -30,7 +30,7 @@ export interface Teacher {
   id: string;
   name: string;
   nip: string;
-  position: string; // Jabatan atau Mapel
+  position: string; 
   image_url: string;
   created_at: string;
 }
@@ -39,7 +39,7 @@ export interface Eskul {
   id: string;
   name: string;
   description: string;
-  schedule: string; // Hari latihan
+  schedule: string; 
   image_url: string;
   created_at: string;
 }
@@ -56,7 +56,7 @@ export interface AgendaItem {
 
 export interface Suggestion {
   id: string;
-  name: string; // Optional
+  name: string; 
   type: 'Saran Fitur' | 'Masukan Umum' | 'Pertanyaan';
   content: string;
   created_at: string;
@@ -79,12 +79,34 @@ export interface User {
   email: string;
   role: 'admin' | 'user';
   created_at: string;
+  student_id?: string;
+  major?: string;
+}
+
+export interface Achievement {
+  id: string;
+  title: string;
+  rank: string;
+  category: string;
+  year: string;
+  image_url: string;
+  created_at: string;
 }
 
 export interface ChatMessage {
   id: string;
   user_id: string;
   user_name: string;
+  message: string;
+  created_at: string;
+}
+
+// Fixed: Added missing ContactMessage interface
+export interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
   message: string;
   created_at: string;
 }
@@ -96,16 +118,6 @@ export interface TelegramInbox {
   image_url?: string;
   raw_data: any;
   status: 'pending' | 'posted_news' | 'posted_gallery' | 'rejected';
-  created_at: string;
-}
-
-export interface ContactMessage {
-  id: string;
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-  is_read: boolean;
   created_at: string;
 }
 
