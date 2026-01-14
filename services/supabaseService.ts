@@ -8,7 +8,7 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
 const DEFAULT_TELEGRAM_TOKEN = '8580733262:AAHGt66q8woKi6hnOHxqdZ285fb65kXuzP0';
 const DEFAULT_TELEGRAM_CHAT_ID = '7577331454';
 
-const supabase = SUPABASE_URL && SUPABASE_ANON_KEY 
+export const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY) 
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) 
   : null;
 
@@ -36,25 +36,31 @@ const mockService = {
   getObj: (key: string) => JSON.parse(localStorage.getItem(key) || '{}'),
 };
 
-export const achievementService = {
-  getAll: async (): Promise<Achievement[]> => {
-    if (supabase) {
-      const { data } = await supabase.from('achievements').select('*').order('created_at', { ascending: false });
-      return data || [];
+export const getSystemStatus = () => !!supabase;
+
+export const visitorService = {
+  getAll: async (): Promise<VisitorLog[]> => {
+    if (supabase) { const { data } = await supabase.from('visitors').select('*').order('visited_at', { ascending: false }); return data || []; }
+    return mockService.get(LOCAL_STORAGE_KEYS.VISITORS);
+  },
+  getOnlineCount: async (): Promise<number> => {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    if (supabase) { 
+      const { count, error } = await supabase.from('visitors').select('*', { count: 'exact', head: true }).gt('visited_at', fiveMinutesAgo); 
+      return count || 1; 
     }
-    return mockService.get(LOCAL_STORAGE_KEYS.ACHIEVEMENTS);
+    const all = mockService.get(LOCAL_STORAGE_KEYS.VISITORS);
+    const active = all.filter((v: any) => v.visited_at > fiveMinutesAgo);
+    return Math.max(1, active.length);
   },
-  save: async (item: Omit<Achievement, 'id' | 'created_at'>): Promise<Achievement> => {
-    const newItem = { ...item, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() };
-    if (supabase) { await supabase.from('achievements').insert([newItem]); return newItem; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.ACHIEVEMENTS);
-    mockService.set(LOCAL_STORAGE_KEYS.ACHIEVEMENTS, [newItem, ...all]);
-    return newItem;
-  },
-  delete: async (id: string): Promise<void> => {
-    if (supabase) { await supabase.from('achievements').delete().eq('id', id); return; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.ACHIEVEMENTS);
-    mockService.set(LOCAL_STORAGE_KEYS.ACHIEVEMENTS, all.filter((i: any) => i.id !== id));
+  logVisit: async (log: Omit<VisitorLog, 'id' | 'visited_at'>): Promise<void> => {
+    const newLog = { ...log, id: Math.random().toString(36).substr(2, 9), visited_at: new Date().toISOString() };
+    if (supabase) { 
+        await supabase.from('visitors').insert([newLog]); 
+        return; 
+    }
+    const all = mockService.get(LOCAL_STORAGE_KEYS.VISITORS);
+    mockService.set(LOCAL_STORAGE_KEYS.VISITORS, [newLog, ...all].slice(0, 100));
   }
 };
 
@@ -83,6 +89,28 @@ export const telegramService = {
     if (supabase) { await supabase.from('telegram_inbox').delete().eq('id', id); return; }
     const all = mockService.get(LOCAL_STORAGE_KEYS.TELE_INBOX);
     mockService.set(LOCAL_STORAGE_KEYS.TELE_INBOX, all.filter((i: any) => i.id !== id));
+  }
+};
+
+export const achievementService = {
+  getAll: async (): Promise<Achievement[]> => {
+    if (supabase) {
+      const { data } = await supabase.from('achievements').select('*').order('created_at', { ascending: false });
+      return data || [];
+    }
+    return mockService.get(LOCAL_STORAGE_KEYS.ACHIEVEMENTS);
+  },
+  save: async (item: Omit<Achievement, 'id' | 'created_at'>): Promise<Achievement> => {
+    const newItem = { ...item, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() };
+    if (supabase) { await supabase.from('achievements').insert([newItem]); return newItem; }
+    const all = mockService.get(LOCAL_STORAGE_KEYS.ACHIEVEMENTS);
+    mockService.set(LOCAL_STORAGE_KEYS.ACHIEVEMENTS, [newItem, ...all]);
+    return newItem;
+  },
+  delete: async (id: string): Promise<void> => {
+    if (supabase) { await supabase.from('achievements').delete().eq('id', id); return; }
+    const all = mockService.get(LOCAL_STORAGE_KEYS.ACHIEVEMENTS);
+    mockService.set(LOCAL_STORAGE_KEYS.ACHIEVEMENTS, all.filter((i: any) => i.id !== id));
   }
 };
 
@@ -271,7 +299,6 @@ export const chatService = {
   }
 };
 
-// Fixed: Added missing contactService export
 export const contactService = {
   send: async (msg: Omit<ContactMessage, 'id' | 'created_at'>): Promise<void> => {
     const newItem = { ...msg, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() };
@@ -310,26 +337,6 @@ export const galleryService = {
     if (supabase) { await supabase.from('gallery').delete().eq('id', id); return; }
     const all = mockService.get(LOCAL_STORAGE_KEYS.GALLERY);
     mockService.set(LOCAL_STORAGE_KEYS.GALLERY, all.filter((item: any) => item.id !== id));
-  }
-};
-
-export const visitorService = {
-  getAll: async (): Promise<VisitorLog[]> => {
-    if (supabase) { const { data } = await supabase.from('visitors').select('*').order('visited_at', { ascending: false }); return data || []; }
-    return mockService.get(LOCAL_STORAGE_KEYS.VISITORS);
-  },
-  getOnlineCount: async (): Promise<number> => {
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-    if (supabase) { const { count } = await supabase.from('visitors').select('*', { count: 'exact', head: true }).gt('visited_at', fiveMinutesAgo); return count || 1; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.VISITORS);
-    const active = all.filter((v: any) => v.visited_at > fiveMinutesAgo);
-    return Math.max(1, active.length);
-  },
-  logVisit: async (log: Omit<VisitorLog, 'id' | 'visited_at'>): Promise<void> => {
-    const newLog = { ...log, id: Math.random().toString(36).substr(2, 9), visited_at: new Date().toISOString() };
-    if (supabase) { await supabase.from('visitors').insert([newLog]); return; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.VISITORS);
-    mockService.set(LOCAL_STORAGE_KEYS.VISITORS, [newLog, ...all].slice(0, 100));
   }
 };
 
