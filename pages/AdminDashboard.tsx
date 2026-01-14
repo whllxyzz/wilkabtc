@@ -153,7 +153,7 @@ const AdminDashboard: React.FC = () => {
     if(!settings?.telegram_bot_token) return alert("Masukkan Token Bot terlebih dahulu!");
     setIsSaving(true);
     try {
-      await new Promise(r => setTimeout(r, 1500));
+      await new Promise(r => setTimeout(r, 2000));
       alert("Bot Berhasil Terhubung! Webhook Aktif.");
     } catch(err) {
       alert("Gagal menghubungkan bot.");
@@ -315,8 +315,20 @@ const AdminDashboard: React.FC = () => {
                       <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Chat ID Admin</label><input type="text" value={settings?.telegram_chat_id} onChange={e => setSettings(settings ? {...settings, telegram_chat_id: e.target.value} : null)} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-blue-600" /></div>
                    </div>
                    <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                      <button type="submit" disabled={isSaving} className="px-10 py-5 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all">SIMPAN PERUBAHAN</button>
-                      <button type="button" onClick={syncBot} disabled={isSaving} className="px-10 py-5 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 hover:bg-slate-800 transition-all"><i className="fa-brands fa-telegram"></i> HUBUNGKAN BOT</button>
+                      <button type="submit" disabled={isSaving} className="px-10 py-5 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-2 min-w-[200px]">
+                        {isSaving ? (
+                          <><i className="fa-solid fa-spinner fa-spin"></i> MENYIMPAN...</>
+                        ) : (
+                          "SIMPAN PERUBAHAN"
+                        )}
+                      </button>
+                      <button type="button" onClick={syncBot} disabled={isSaving} className="px-10 py-5 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 hover:bg-slate-800 transition-all min-w-[200px]">
+                        {isSaving ? (
+                          <><i className="fa-solid fa-spinner fa-spin"></i> MENGHUBUNGKAN...</>
+                        ) : (
+                          <><i className="fa-brands fa-telegram"></i> HUBUNGKAN BOT</>
+                        )}
+                      </button>
                    </div>
                 </form>
             </div>
