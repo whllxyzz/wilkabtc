@@ -14,7 +14,7 @@ import {
   suggestionService,
   departmentService
 } from '../services/supabaseService';
-import { NewsItem, GalleryItem, Teacher, AgendaItem, Eskul, TelegramInbox, SiteSettings, Suggestion, Department, User } from '../types';
+import { NewsItem, GalleryItem, Teacher, AgendaItem, Eskul, TelegramInbox, SiteSettings, Suggestion, Department, User, VisitorLog } from '../types';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -34,6 +34,8 @@ const AdminDashboard: React.FC = () => {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [visitorLogs, setVisitorLogs] = useState<VisitorLog[]>([]);
 
   // UI States
   const [isSaving, setIsSaving] = useState(false);
@@ -66,7 +68,7 @@ const AdminDashboard: React.FC = () => {
   const loadAllData = async () => {
     setLoading(true);
     try {
-      const [vCount, n, g, t, a, e, i, sug, s, d] = await Promise.all([
+      const [vCount, n, g, t, a, e, i, sug, s, d, u, logs] = await Promise.all([
         visitorService.getOnlineCount(),
         newsService.getAll(),
         galleryService.getAll(),
@@ -76,7 +78,9 @@ const AdminDashboard: React.FC = () => {
         telegramService.getInbox(),
         suggestionService.getAll(),
         settingsService.get(),
-        departmentService.getAll()
+        departmentService.getAll(),
+        authService.getAllUsers(),
+        visitorService.getAll()
       ]);
 
       setStats({ visitors: vCount, news: n.length, gallery: g.length });
@@ -89,6 +93,8 @@ const AdminDashboard: React.FC = () => {
       setSuggestions(sug);
       setSettings(s);
       setDepartments(d);
+      setUsers(u);
+      setVisitorLogs(logs);
     } catch (error) {
       console.error("Error loading data", error);
     } finally {
@@ -106,6 +112,7 @@ const AdminDashboard: React.FC = () => {
     { id: 'eskul', icon: 'fa-basketball', label: 'Eskul', roles: ['admin', 'user'] },
     { id: 'depts', icon: 'fa-building-columns', label: 'Jurusan', roles: ['admin'] },
     { id: 'teachers', icon: 'fa-chalkboard-user', label: 'Guru', roles: ['admin'] },
+    { id: 'users', icon: 'fa-users-gear', label: 'Daftar Pengguna', roles: ['admin'] },
     { id: 'tele_inbox', icon: 'fa-telegram', label: 'Inbox Bot', badge: teleInbox.length, roles: ['admin'] },
     { id: 'suggestions', icon: 'fa-box-open', label: 'Kotak Saran', badge: suggestions.length, roles: ['admin'] },
     { id: 'settings', icon: 'fa-gear', label: 'Pengaturan', roles: ['admin'] },
@@ -199,6 +206,7 @@ const AdminDashboard: React.FC = () => {
     else if (activeTab === 'eskul') await eskulService.delete(id);
     else if (activeTab === 'teachers' && isAdmin) await teacherService.delete(id);
     else if (activeTab === 'depts' && isAdmin) await departmentService.delete(id);
+    else if (activeTab === 'users' && isAdmin) await authService.deleteUser(id);
     loadAllData();
   };
 
@@ -259,7 +267,7 @@ const AdminDashboard: React.FC = () => {
             <div className="flex items-center gap-4">
                <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight">{activeTab.replace('_', ' ')}</h1>
                {['news', 'gallery', 'agenda', 'eskul'].includes(activeTab) || (isAdmin && ['teachers', 'depts'].includes(activeTab)) ? (
-                  <button onClick={() => handleOpenModal()} className="hidden sm:block px-5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg">
+                  <button onClick={() => handleOpenModal()} className="hidden sm:block px-5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-200">
                     + TAMBAH DATA
                   </button>
                ) : null}
@@ -277,16 +285,6 @@ const AdminDashboard: React.FC = () => {
                 </div>
             </div>
         </header>
-
-        {/* Mobile-only Add Button Floating */}
-        {['news', 'gallery', 'agenda', 'eskul'].includes(activeTab) || (isAdmin && ['teachers', 'depts'].includes(activeTab)) ? (
-            <button 
-              onClick={() => handleOpenModal()}
-              className="sm:hidden fixed bottom-6 right-6 w-16 h-16 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center z-[50] animate-bounce-slow"
-            >
-              <i className="fa-solid fa-plus text-xl"></i>
-            </button>
-        ) : null}
 
         {/* Tab Logic */}
         {!filteredMenu.find(m => m.id === activeTab) ? (
@@ -320,6 +318,100 @@ const AdminDashboard: React.FC = () => {
                      <button onClick={() => setActiveTab('tele_inbox')} className="w-full md:w-auto px-10 py-4 bg-white text-blue-600 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:scale-105 transition-transform">Buka Konsol Bot</button>
                   </div>
                 )}
+            </div>
+        ) : activeTab === 'users' && isAdmin ? (
+            <div className="space-y-12 animate-zoom-in pb-20">
+                {/* Registered Users Section */}
+                <div className="bg-white rounded-[3rem] border border-slate-200 shadow-sm overflow-hidden">
+                   <div className="p-8 border-b border-slate-100 flex justify-between items-center">
+                      <h3 className="text-xl font-black text-slate-900 uppercase">User Terdaftar</h3>
+                      <span className="bg-blue-100 text-blue-600 text-[10px] font-black px-4 py-1 rounded-full">{users.length} Akun</span>
+                   </div>
+                   <div className="overflow-x-auto">
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr className="bg-slate-50">
+                            <th className="p-6 text-[10px] font-black uppercase text-slate-400">Nama</th>
+                            <th className="p-6 text-[10px] font-black uppercase text-slate-400">Email</th>
+                            <th className="p-6 text-[10px] font-black uppercase text-slate-400">Role</th>
+                            <th className="p-6 text-[10px] font-black uppercase text-slate-400">Terdaftar Pada</th>
+                            <th className="p-6 text-[10px] font-black uppercase text-slate-400 text-right">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {users.map(u => (
+                            <tr key={u.id} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="p-6 font-bold text-xs text-slate-800">{u.name}</td>
+                              <td className="p-6 font-bold text-xs text-slate-500">{u.email}</td>
+                              <td className="p-6">
+                                <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded ${u.role === 'admin' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>
+                                  {u.role}
+                                </span>
+                              </td>
+                              <td className="p-6 text-xs text-slate-400">{new Date(u.created_at).toLocaleDateString()}</td>
+                              <td className="p-6 text-right">
+                                {u.email !== 'wilka@smkn2.id' && (
+                                  <button onClick={() => handleDelete(u.id)} className="text-rose-400 hover:text-rose-600"><i className="fa-solid fa-trash-can"></i></button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                   </div>
+                </div>
+
+                {/* Visitor Log (Technical Data) */}
+                <div className="bg-slate-900 rounded-[3rem] shadow-2xl overflow-hidden border border-slate-800">
+                   <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/5">
+                      <h3 className="text-xl font-black text-white uppercase tracking-tight">Log Aktivitas & Teknis</h3>
+                      <div className="flex items-center gap-2">
+                         <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
+                         <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Real-time Monitoring</span>
+                      </div>
+                   </div>
+                   <div className="overflow-x-auto">
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr className="bg-white/5">
+                            <th className="p-6 text-[10px] font-black uppercase text-slate-500">Visitor/IP</th>
+                            <th className="p-6 text-[10px] font-black uppercase text-slate-500">Location</th>
+                            <th className="p-6 text-[10px] font-black uppercase text-slate-500">Tech Stack</th>
+                            <th className="p-6 text-[10px] font-black uppercase text-slate-500 text-center">Battery</th>
+                            <th className="p-6 text-[10px] font-black uppercase text-slate-500">Visited At</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                          {visitorLogs.map(log => (
+                            <tr key={log.id} className="hover:bg-white/5 transition-colors">
+                              <td className="p-6">
+                                <div className="text-xs font-black text-white">{log.ip}</div>
+                                <div className="text-[9px] font-bold text-slate-500 mt-1">{log.device}</div>
+                              </td>
+                              <td className="p-6">
+                                <div className="text-xs font-bold text-slate-400 flex items-center gap-2">
+                                  <i className="fa-solid fa-location-dot text-rose-500"></i> {log.location}
+                                </div>
+                              </td>
+                              <td className="p-6">
+                                <div className="flex gap-2">
+                                  <span className="bg-slate-800 text-slate-300 text-[9px] font-black px-2 py-1 rounded border border-white/5">{log.browser}</span>
+                                  <span className="bg-slate-800 text-slate-300 text-[9px] font-black px-2 py-1 rounded border border-white/5">{log.os}</span>
+                                </div>
+                              </td>
+                              <td className="p-6 text-center">
+                                <div className="inline-flex items-center gap-2 bg-white/5 px-3 py-1 rounded-full">
+                                  <i className={`fa-solid fa-battery-${parseInt(log.battery) > 80 ? 'full' : parseInt(log.battery) > 40 ? 'three-quarters' : 'quarter'} text-[10px] ${parseInt(log.battery) < 20 ? 'text-rose-500' : 'text-emerald-400'}`}></i>
+                                  <span className="text-[10px] font-black text-white">{log.battery}</span>
+                                </div>
+                              </td>
+                              <td className="p-6 text-xs text-slate-500">{new Date(log.visited_at).toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                   </div>
+                </div>
             </div>
         ) : activeTab === 'settings' && isAdmin ? (
             <div className="max-w-4xl mx-auto space-y-8 animate-zoom-in pb-20">
@@ -519,7 +611,7 @@ const AdminDashboard: React.FC = () => {
                 )}
                 
                 <div className="flex gap-4 pt-6">
-                   <button type="submit" disabled={isSaving} className="w-full py-5 bg-blue-600 text-white rounded-[1.5rem] font-black text-xs tracking-widest shadow-xl hover:bg-blue-700 disabled:opacity-50 uppercase">
+                   <button type="submit" disabled={isSaving} className="w-full py-5 bg-blue-600 text-white rounded-[1.5rem] font-black text-xs tracking-widest shadow-xl shadow-blue-200 hover:bg-blue-700 disabled:opacity-50 uppercase">
                      {isSaving ? "MEMPROSES..." : "SIMPAN DATA"}
                    </button>
                 </div>
