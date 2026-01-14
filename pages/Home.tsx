@@ -40,7 +40,7 @@ const Home: React.FC = () => {
   if (loading) return null;
 
   return (
-    <div className="flex flex-col min-h-screen pt-16">
+    <div className="flex flex-col min-h-screen pt-16 bg-white">
       
       {/* Running Text Info Bar */}
       {siteSettings?.running_text && (
@@ -90,7 +90,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Achievement Spotlight - UNIQUE FEATURE */}
+      {/* Achievement Spotlight */}
       <section className="py-24 bg-slate-900 text-white overflow-hidden relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="flex justify-between items-end mb-16">
@@ -114,12 +114,6 @@ const Home: React.FC = () => {
                 </div>
               </div>
             ))}
-            {achievements.length === 0 && [1,2,3,4].map(i => (
-              <div key={i} className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] text-center opacity-20">
-                <i className="fa-solid fa-trophy text-4xl mb-4"></i>
-                <div className="h-4 w-20 bg-white/20 rounded mx-auto"></div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
@@ -127,7 +121,7 @@ const Home: React.FC = () => {
       {/* Stats Section */}
       <section className="bg-brand-600 py-16 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x divide-white/20">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center lg:divide-x divide-white/20">
             {[
               { label: 'Siswa Aktif', value: '1,200+' },
               { label: 'Guru & Staf', value: '85+' },
@@ -152,7 +146,7 @@ const Home: React.FC = () => {
               </div>
               <div className="text-left">
                  <h2 className="text-3xl font-black text-slate-900 mb-4">Bingung Pilih Jurusan?</h2>
-                 <p className="text-slate-500 font-medium mb-8">Gunakan teknologi AI kami untuk membantu kamu menemukan potensi diri yang tersembunyi. Hanya butuh 1 menit!</p>
+                 <p className="text-slate-500 font-medium mb-8">Gunakan teknologi AI kami untuk membantu kamu menemukan potensi diri yang tersembunyi.</p>
                  <Link to="/matcher" className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-600 transition-all">Coba AI Matcher Sekarang</Link>
               </div>
            </div>

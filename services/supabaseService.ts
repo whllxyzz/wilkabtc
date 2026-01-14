@@ -1,349 +1,185 @@
 
-import { NewsItem, GalleryItem, VisitorLog, User, Department, ChatMessage, SiteSettings, TelegramInbox, ContactMessage, Teacher, Eskul, AgendaItem, Suggestion, Achievement } from '../types';
-import { createClient } from '@supabase/supabase-js';
+import { 
+  Photo, Track, Post, Document, AITool, 
+  NewsItem, Department, SiteSettings, Achievement, 
+  GalleryItem, Teacher, AgendaItem, Eskul, 
+  TelegramInbox, Suggestion, User, ChatMessage 
+} from '../types';
 
-const SUPABASE_URL = process.env.SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
+// Mock data to initialize the experience
+const MOCK_PHOTOS: Photo[] = [
+  { id: '1', url: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05', title: 'Mountain Mist', category: 'Nature', date: '2024-03-01' },
+  { id: '2', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e', title: 'Forest Path', category: 'Travel', date: '2024-02-15' },
+];
 
-const DEFAULT_TELEGRAM_TOKEN = '8580733262:AAHGt66q8woKi6hnOHxqdZ285fb65kXuzP0';
-const DEFAULT_TELEGRAM_CHAT_ID = '7577331454';
+const MOCK_TRACKS: Track[] = [
+  { id: '1', title: 'Midnight City', artist: 'M83', url: '#', duration: '4:03', coverUrl: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17' },
+  { id: '2', title: 'Starboy', artist: 'The Weeknd', url: '#', duration: '3:50', coverUrl: 'https://images.unsplash.com/photo-1493225255756-d9584f8606e9' },
+];
 
-// Inisialisasi Supabase dengan pengecekan ketat
-export const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY && SUPABASE_URL !== 'undefined' && SUPABASE_URL !== '') 
-  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) 
-  : null;
+const MOCK_POSTS: Post[] = [
+  { id: '1', title: 'The Future of AI Dashboards', content: 'Exploring how deep-integration will change personal productivity...', tags: ['Tech', 'Design'], createdAt: '2024-03-10' },
+  { id: '2', title: 'Travel Log: Iceland', content: 'Seven days of ice and fire. The landscapes are beyond words...', tags: ['Travel', 'Photography'], createdAt: '2024-02-28' },
+];
 
-const LOCAL_STORAGE_KEYS = {
-  NEWS: 'smkn2_news',
-  GALLERY: 'smkn2_gallery',
-  DEPARTMENTS: 'smkn2_departments',
-  TEACHERS: 'smkn2_teachers',
-  ESKUL: 'smkn2_eskul',
-  AGENDA: 'smkn2_agenda',
-  SUGGESTIONS: 'smkn2_suggestions',
-  VISITORS: 'smkn2_visitors',
-  USERS: 'smkn2_users',
-  CHATS: 'smkn2_chats',
-  CONTACTS: 'smkn2_contacts',
-  AUTH_SESSION: 'smkn2_session',
-  SETTINGS: 'smkn2_settings',
-  TELE_INBOX: 'smkn2_tele_inbox',
-  ACHIEVEMENTS: 'smkn2_achievements'
+const MOCK_DOCS: Document[] = [
+  { id: '1', name: 'Resume_2024.pdf', size: '1.2 MB', type: 'PDF', url: '#', uploadedAt: '2024-01-05' },
+  { id: '2', name: 'Project_Proposal.pdf', size: '4.5 MB', type: 'PDF', url: '#', uploadedAt: '2024-03-02' },
+];
+
+const MOCK_AI: AITool[] = [
+  { id: '1', name: 'ChatGPT', url: 'https://chat.openai.com', icon: 'fa-robot', color: '#10a37f', description: 'Advanced conversational AI' },
+  { id: '2', name: 'Claude', url: 'https://claude.ai', icon: 'fa-brain', color: '#d97757', description: 'Helpful and honest AI' },
+  { id: '3', name: 'Midjourney', url: 'https://midjourney.com', icon: 'fa-palette', color: '#5865f2', description: 'Generative art engine' },
+  { id: '4', name: 'Perplexity', url: 'https://perplexity.ai', icon: 'fa-search', color: '#20b2aa', description: 'Search-focused AI' },
+];
+
+// --- School Website Mock Data ---
+
+const MOCK_NEWS: NewsItem[] = [
+  { id: '1', title: 'Juara Umum LKS 2024', content: 'Siswa SMKN 2 Tembilahan berhasil meraih juara umum pada ajang Lomba Kompetensi Siswa tingkat kabupaten...', author: 'Admin Utama', image_url: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644', created_at: new Date().toISOString() },
+  { id: '2', title: 'Kunjungan Industri Jakarta', content: 'Sebanyak 100 siswa jurusan TKJ melakukan kunjungan industri ke beberapa startup teknologi ternama di Jakarta...', author: 'Humas', image_url: 'https://images.unsplash.com/photo-1531482615713-2afd69097998', created_at: new Date().toISOString() },
+];
+
+const MOCK_SETTINGS: SiteSettings = {
+  school_name: 'SMKN 2 Tembilahan',
+  running_text: 'Selamat Datang di Portal Resmi SMKN 2 Tembilahan - PPDB Tahun Ajaran 2026/2027 Segera Dibuka!',
+  hero_image_url: 'https://images.unsplash.com/photo-1523050335102-c325095014f3',
+  sub_welcome_text: 'Mencetak generasi unggul yang kompeten, berkarakter, dan siap bersaing di dunia industri global.',
+  telegram_bot_token: 'MOCK_TOKEN',
+  telegram_channel_id: '@smkn2tembilahan_news'
 };
 
-const mockService = {
-  get: (key: string) => JSON.parse(localStorage.getItem(key) || '[]'),
-  set: (key: string, data: any) => localStorage.setItem(key, JSON.stringify(data)),
-  getObj: (key: string) => JSON.parse(localStorage.getItem(key) || '{}'),
-};
+const MOCK_ACHIEVEMENTS: Achievement[] = [
+  { id: '1', title: 'LKS Web Tech', rank: 'Juara 1', category: 'Nasional', year: '2023' },
+  { id: '2', title: 'O2SN Basket', rank: 'Juara 2', category: 'Provinsi', year: '2024' },
+];
 
-export const getSystemStatus = () => !!supabase;
+const MOCK_STORAGE_FILES = [
+  { id: '1', name: 'school_banner.jpg', url: 'https://images.unsplash.com/photo-1523050335102-c325095014f3', size: '2.4 MB', type: 'image/jpeg', created_at: '2024-03-01' },
+  { id: '2', name: 'campus_life.jpg', url: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644', size: '1.8 MB', type: 'image/jpeg', created_at: '2024-03-05' },
+  { id: '3', name: 'lab_computer.jpg', url: 'https://images.unsplash.com/photo-1531482615713-2afd69097998', size: '3.1 MB', type: 'image/jpeg', created_at: '2024-03-10' }
+];
 
-export const visitorService = {
-  getAll: async (): Promise<VisitorLog[]> => {
-    if (supabase) { 
-      const { data, error } = await supabase.from('visitors').select('*').order('visited_at', { ascending: false }); 
-      if (!error) return data || [];
-    }
-    return mockService.get(LOCAL_STORAGE_KEYS.VISITORS);
+// --- Exported Services ---
+
+export const personalDataService = {
+  getPhotos: async (): Promise<Photo[]> => [...MOCK_PHOTOS],
+  addPhoto: async (data: Omit<Photo, 'id' | 'date'>): Promise<Photo> => {
+    const newPhoto = {
+      id: Math.random().toString(36).substr(2, 9),
+      date: new Date().toISOString().split('T')[0],
+      ...data
+    };
+    MOCK_PHOTOS.unshift(newPhoto);
+    return newPhoto;
   },
-  getOnlineCount: async (): Promise<number> => {
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-    if (supabase) { 
-      const { count } = await supabase.from('visitors').select('*', { count: 'exact', head: true }).gt('visited_at', fiveMinutesAgo); 
-      return count || 1; 
-    }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.VISITORS);
-    const active = all.filter((v: any) => new Date(v.visited_at).getTime() > new Date(fiveMinutesAgo).getTime());
-    return Math.max(1, active.length);
-  },
-  logVisit: async (log: Omit<VisitorLog, 'id' | 'visited_at'>): Promise<void> => {
-    const newLog = { ...log, id: Math.random().toString(36).substr(2, 9), visited_at: new Date().toISOString() };
-    if (supabase) { 
-        const { error } = await supabase.from('visitors').insert([newLog]); 
-        if (!error) return; 
-    }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.VISITORS);
-    mockService.set(LOCAL_STORAGE_KEYS.VISITORS, [newLog, ...all].slice(0, 100));
-  }
+  getTracks: async (): Promise<Track[]> => MOCK_TRACKS,
+  getPosts: async (): Promise<Post[]> => MOCK_POSTS,
+  getDocs: async (): Promise<Document[]> => MOCK_DOCS,
+  getAITools: async (): Promise<AITool[]> => MOCK_AI,
 };
 
 export const newsService = {
-  getAll: async (): Promise<NewsItem[]> => {
-    if (supabase) { 
-      const { data } = await supabase.from('news').select('*').order('created_at', { ascending: false }); 
-      return data || []; 
-    }
-    return mockService.get(LOCAL_STORAGE_KEYS.NEWS);
-  },
-  create: async (news: Omit<NewsItem, 'id' | 'created_at'>): Promise<NewsItem> => {
-    const newItem = { ...news, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() };
-    if (supabase) { await supabase.from('news').insert([newItem]); return newItem; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.NEWS);
-    mockService.set(LOCAL_STORAGE_KEYS.NEWS, [newItem, ...all]);
-    return newItem;
-  },
-  update: async (id: string, updates: Partial<NewsItem>): Promise<void> => {
-    if (supabase) { await supabase.from('news').update(updates).eq('id', id); return; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.NEWS);
-    const updated = all.map((item: any) => item.id === id ? { ...item, ...updates } : item);
-    mockService.set(LOCAL_STORAGE_KEYS.NEWS, updated);
-  },
-  delete: async (id: string): Promise<void> => {
-    if (supabase) { await supabase.from('news').delete().eq('id', id); return; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.NEWS);
-    mockService.set(LOCAL_STORAGE_KEYS.NEWS, all.filter((item: any) => item.id !== id));
-  }
-};
-
-export const telegramService = {
-  getInbox: async (): Promise<TelegramInbox[]> => {
-    if (supabase) {
-      const { data } = await supabase.from('telegram_inbox').select('*').order('created_at', { ascending: false });
-      return data || [];
-    }
-    return mockService.get(LOCAL_STORAGE_KEYS.TELE_INBOX);
-  },
-  deleteInboxItem: async (id: string) => {
-    if (supabase) { await supabase.from('telegram_inbox').delete().eq('id', id); return; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.TELE_INBOX);
-    mockService.set(LOCAL_STORAGE_KEYS.TELE_INBOX, all.filter((i: any) => i.id !== id));
-  }
-};
-
-export const authService = {
-  getAllUsers: async (): Promise<User[]> => {
-    if (supabase) {
-      const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
-      if (data) return data;
-    }
-    return mockService.get(LOCAL_STORAGE_KEYS.USERS);
-  },
-  // Added: Missing register method for pages/Register.tsx
-  register: async (name: string, email: string, password: string): Promise<boolean> => {
-    const newUser = {
-      id: Math.random().toString(36).substr(2, 9),
-      name,
-      email,
-      password, // Note: In production, never store passwords in plain text.
-      role: 'user' as const,
-      created_at: new Date().toISOString()
-    };
-
-    if (supabase) {
-      const { error } = await supabase.from('users').insert([newUser]);
-      return !error;
-    }
-
-    const users = mockService.get(LOCAL_STORAGE_KEYS.USERS);
-    if (users.some((u: any) => u.email === email)) return false;
-    
-    mockService.set(LOCAL_STORAGE_KEYS.USERS, [...users, newUser]);
-    return true;
-  },
-  login: async (email: string, password: string): Promise<boolean> => {
-    if (email === 'wilka' && password === 'wilka') {
-      const adminSession: User = { id: 'admin-1', name: 'WilkaXyz', email: 'wilka@smkn2.id', role: 'admin', created_at: new Date().toISOString(), student_id: 'SUPER-ADMIN' };
-      mockService.set(LOCAL_STORAGE_KEYS.AUTH_SESSION, adminSession);
-      return true;
-    }
-    const users = await authService.getAllUsers() as any[];
-    const user = users.find((u: any) => (u.email === email || u.name === email) && u.password === password);
-    if (user) {
-      const { password: _p, ...sessionData } = user;
-      mockService.set(LOCAL_STORAGE_KEYS.AUTH_SESSION, sessionData);
-      return true;
-    }
-    return false;
-  },
-  logout: async () => { localStorage.removeItem(LOCAL_STORAGE_KEYS.AUTH_SESSION); },
-  getCurrentUser: (): User | null => mockService.get(LOCAL_STORAGE_KEYS.AUTH_SESSION) || null,
-  isAuthenticated: (): boolean => !!localStorage.getItem(LOCAL_STORAGE_KEYS.AUTH_SESSION),
-  deleteUser: async (id: string): Promise<void> => {
-    if (supabase) await supabase.from('users').delete().eq('id', id);
-    const users = mockService.get(LOCAL_STORAGE_KEYS.USERS);
-    mockService.set(LOCAL_STORAGE_KEYS.USERS, users.filter((u: any) => u.id !== id));
-  }
-};
-
-export const settingsService = {
-  get: async (): Promise<SiteSettings> => {
-    const defaults: SiteSettings = {
-      school_name: 'SMKN 2 Tembilahan',
-      welcome_text: 'Membangun Keahlian, Mengukir Masa Depan.',
-      sub_welcome_text: 'SMKN 2 Tembilahan berkomitmen menghadirkan pendidikan vokasi berkualitas.',
-      hero_image_url: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?q=80&w=2070&auto=format&fit=crop',
-      telegram_bot_token: DEFAULT_TELEGRAM_TOKEN,
-      telegram_chat_id: DEFAULT_TELEGRAM_CHAT_ID
-    };
-    if (supabase) {
-      const { data } = await supabase.from('settings').select('*').single();
-      if (data) return data;
-    }
-    const stored = localStorage.getItem(LOCAL_STORAGE_KEYS.SETTINGS);
-    return stored ? JSON.parse(stored) : defaults;
-  },
-  update: async (settings: Partial<SiteSettings>): Promise<void> => {
-    if (supabase) { await supabase.from('settings').upsert({ id: 1, ...settings }); return; }
-    const current = await settingsService.get();
-    localStorage.setItem(LOCAL_STORAGE_KEYS.SETTINGS, JSON.stringify({ ...current, ...settings }));
-  }
-};
-
-export const galleryService = {
-  getAll: async (): Promise<GalleryItem[]> => {
-    if (supabase) { const { data } = await supabase.from('gallery').select('*').order('created_at', { ascending: false }); return data || []; }
-    return mockService.get(LOCAL_STORAGE_KEYS.GALLERY);
-  },
-  add: async (item: Omit<GalleryItem, 'id' | 'created_at'>): Promise<GalleryItem> => {
-    const newItem = { ...item, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() };
-    if (supabase) { await supabase.from('gallery').insert([newItem]); return newItem; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.GALLERY);
-    mockService.set(LOCAL_STORAGE_KEYS.GALLERY, [newItem, ...all]);
-    return newItem;
-  },
-  update: async (id: string, updates: Partial<GalleryItem>): Promise<void> => {
-    if (supabase) { await supabase.from('gallery').update(updates).eq('id', id); return; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.GALLERY);
-    const updated = all.map((item: any) => item.id === id ? { ...item, ...updates } : item);
-    mockService.set(LOCAL_STORAGE_KEYS.GALLERY, updated);
-  },
-  delete: async (id: string): Promise<void> => {
-    if (supabase) { await supabase.from('gallery').delete().eq('id', id); return; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.GALLERY);
-    mockService.set(LOCAL_STORAGE_KEYS.GALLERY, all.filter((i: any) => i.id !== id));
-  }
-};
-
-export const eskulService = {
-  getAll: async (): Promise<Eskul[]> => {
-    if (supabase) { const { data } = await supabase.from('eskul').select('*').order('name', { ascending: true }); return data || []; }
-    return mockService.get(LOCAL_STORAGE_KEYS.ESKUL);
-  },
-  save: async (item: Omit<Eskul, 'id' | 'created_at'>): Promise<Eskul> => {
-    const newItem = { ...item, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() };
-    if (supabase) { await supabase.from('eskul').insert([newItem]); return newItem; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.ESKUL);
-    mockService.set(LOCAL_STORAGE_KEYS.ESKUL, [newItem, ...all]);
-    return newItem;
-  },
-  update: async (id: string, updates: Partial<Eskul>): Promise<void> => {
-    if (supabase) { await supabase.from('eskul').update(updates).eq('id', id); return; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.ESKUL);
-    const updated = all.map((i: any) => i.id === id ? { ...i, ...updates } : i);
-    mockService.set(LOCAL_STORAGE_KEYS.ESKUL, updated);
-  },
-  delete: async (id: string): Promise<void> => {
-    if (supabase) { await supabase.from('eskul').delete().eq('id', id); return; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.ESKUL);
-    mockService.set(LOCAL_STORAGE_KEYS.ESKUL, all.filter((i: any) => i.id !== id));
-  }
-};
-
-export const agendaService = {
-  getAll: async (): Promise<AgendaItem[]> => {
-    if (supabase) { const { data } = await supabase.from('agenda').select('*').order('date', { ascending: true }); return data || []; }
-    return mockService.get(LOCAL_STORAGE_KEYS.AGENDA);
-  },
-  save: async (item: Omit<AgendaItem, 'id' | 'created_at'>): Promise<AgendaItem> => {
-    const newItem = { ...item, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() };
-    if (supabase) { await supabase.from('agenda').insert([newItem]); return newItem; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.AGENDA);
-    mockService.set(LOCAL_STORAGE_KEYS.AGENDA, [newItem, ...all]);
-    return newItem;
-  },
-  update: async (id: string, updates: Partial<AgendaItem>): Promise<void> => {
-    if (supabase) { await supabase.from('agenda').update(updates).eq('id', id); return; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.AGENDA);
-    const updated = all.map((i: any) => i.id === id ? { ...i, ...updates } : i);
-    mockService.set(LOCAL_STORAGE_KEYS.AGENDA, updated);
-  },
-  delete: async (id: string): Promise<void> => {
-    if (supabase) { await supabase.from('agenda').delete().eq('id', id); return; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.AGENDA);
-    mockService.set(LOCAL_STORAGE_KEYS.AGENDA, all.filter((i: any) => i.id !== id));
-  }
-};
-
-export const suggestionService = {
-  getAll: async (): Promise<Suggestion[]> => {
-    if (supabase) { const { data } = await supabase.from('suggestions').select('*').order('created_at', { ascending: false }); return data || []; }
-    return mockService.get(LOCAL_STORAGE_KEYS.SUGGESTIONS);
-  },
-  submit: async (item: Omit<Suggestion, 'id' | 'created_at'>): Promise<void> => {
-    const newItem = { ...item, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() };
-    if (supabase) { await supabase.from('suggestions').insert([newItem]); return; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.SUGGESTIONS);
-    mockService.set(LOCAL_STORAGE_KEYS.SUGGESTIONS, [newItem, ...all]);
-  },
-  delete: async (id: string): Promise<void> => {
-    if (supabase) { await supabase.from('suggestions').delete().eq('id', id); return; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.SUGGESTIONS);
-    mockService.set(LOCAL_STORAGE_KEYS.SUGGESTIONS, all.filter((i: any) => i.id !== id));
-  }
-};
-
-export const teacherService = {
-  getAll: async (): Promise<Teacher[]> => {
-    if (supabase) { const { data } = await supabase.from('teachers').select('*').order('name', { ascending: true }); return data || []; }
-    return mockService.get(LOCAL_STORAGE_KEYS.TEACHERS);
-  },
-  save: async (item: Omit<Teacher, 'id' | 'created_at'>): Promise<Teacher> => {
-    const newItem = { ...item, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() };
-    if (supabase) { await supabase.from('teachers').insert([newItem]); return newItem; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.TEACHERS);
-    mockService.set(LOCAL_STORAGE_KEYS.TEACHERS, [newItem, ...all]);
-    return newItem;
-  }
-};
-
-export const achievementService = {
-  getAll: async (): Promise<Achievement[]> => {
-    if (supabase) { const { data } = await supabase.from('achievements').select('*').order('created_at', { ascending: false }); return data || []; }
-    return mockService.get(LOCAL_STORAGE_KEYS.ACHIEVEMENTS);
-  },
-  save: async (item: Omit<Achievement, 'id' | 'created_at'>): Promise<Achievement> => {
-    const newItem = { ...item, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() };
-    if (supabase) { await supabase.from('achievements').insert([newItem]); return newItem; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.ACHIEVEMENTS);
-    mockService.set(LOCAL_STORAGE_KEYS.ACHIEVEMENTS, [newItem, ...all]);
-    return newItem;
-  }
+  getAll: async (): Promise<NewsItem[]> => MOCK_NEWS,
+  create: async (data: any) => ({ ...data, id: Math.random().toString() }),
+  update: async (id: string, data: any) => ({ ...data, id }),
+  delete: async (id: string) => true,
 };
 
 export const departmentService = {
-  getAll: async (): Promise<Department[]> => {
-    if (supabase) { const { data } = await supabase.from('departments').select('*').order('name', { ascending: true }); return data || []; }
-    return mockService.get(LOCAL_STORAGE_KEYS.DEPARTMENTS);
-  },
-  save: async (dept: Omit<Department, 'id' | 'created_at'>): Promise<Department> => {
-    const newItem = { ...dept, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() };
-    if (supabase) { await supabase.from('departments').insert([newItem]); return newItem; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.DEPARTMENTS);
-    mockService.set(LOCAL_STORAGE_KEYS.DEPARTMENTS, [newItem, ...all]);
-    return newItem;
-  }
+  getAll: async (): Promise<Department[]> => [],
 };
 
-export const chatService = {
-  getAll: async (): Promise<ChatMessage[]> => {
-    if (supabase) { const { data } = await supabase.from('chats').select('*').order('created_at', { ascending: true }); return data || []; }
-    return mockService.get(LOCAL_STORAGE_KEYS.CHATS).slice(-50); 
-  },
-  send: async (msg: Omit<ChatMessage, 'id' | 'created_at'>): Promise<ChatMessage> => {
-    const newItem = { ...msg, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() };
-    if (supabase) { await supabase.from('chats').insert([newItem]); return newItem; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.CHATS);
-    mockService.set(LOCAL_STORAGE_KEYS.CHATS, [...all, newItem]);
-    return newItem;
-  }
+export const settingsService = {
+  get: async (): Promise<SiteSettings> => MOCK_SETTINGS,
+  update: async (data: SiteSettings) => data,
+};
+
+export const achievementService = {
+  getAll: async (): Promise<Achievement[]> => MOCK_ACHIEVEMENTS,
+};
+
+export const galleryService = {
+  getAll: async (): Promise<GalleryItem[]> => [],
+  add: async (data: any) => ({ ...data, id: Math.random().toString() }),
+  update: async (id: string, data: any) => ({ ...data, id }),
+  delete: async (id: string) => true,
 };
 
 export const contactService = {
-  send: async (msg: Omit<ContactMessage, 'id' | 'created_at'>): Promise<void> => {
-    const newItem = { ...msg, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() };
-    if (supabase) { await supabase.from('contacts').insert([newItem]); return; }
-    const all = mockService.get(LOCAL_STORAGE_KEYS.CONTACTS);
-    mockService.set(LOCAL_STORAGE_KEYS.CONTACTS, [newItem, ...all]);
+  send: async (data: any) => true,
+};
+
+export const authService = {
+  login: async (email: string, pass: string) => true,
+  register: async (name: string, email: string, pass: string) => true,
+  logout: () => {},
+  getCurrentUser: (): User | null => ({ id: '1', name: 'Wilka', email: 'wilka@smkn2.id', role: 'admin' }),
+  getAllUsers: async (): Promise<User[]> => [{ id: '1', name: 'Wilka', email: 'wilka@smkn2.id', role: 'admin' }],
+  deleteUser: async (id: string) => true,
+};
+
+export const visitorService = {
+  getOnlineCount: async () => Math.floor(Math.random() * 50) + 1,
+};
+
+export const teacherService = {
+  getAll: async (): Promise<Teacher[]> => [],
+};
+
+export const agendaService = {
+  getAll: async (): Promise<AgendaItem[]> => [],
+  save: async (data: any) => ({ ...data, id: Math.random().toString() }),
+  update: async (id: string, data: any) => ({ ...data, id }),
+  delete: async (id: string) => true,
+};
+
+export const eskulService = {
+  getAll: async (): Promise<Eskul[]> => [],
+  save: async (data: any) => ({ ...data, id: Math.random().toString() }),
+  update: async (id: string, data: any) => ({ ...data, id }),
+  delete: async (id: string) => true,
+};
+
+export const telegramService = {
+  getInbox: async (): Promise<TelegramInbox[]> => [],
+  deleteInboxItem: async (id: string) => true,
+};
+
+export const suggestionService = {
+  getAll: async (): Promise<Suggestion[]> => [],
+  delete: async (id: string) => true,
+};
+
+export const chatService = {
+  getAll: async (): Promise<ChatMessage[]> => [],
+  send: async (data: any): Promise<ChatMessage> => ({ ...data, id: Math.random().toString(), created_at: new Date().toISOString() }),
+};
+
+export const storageService = {
+  upload: async (file: File) => {
+    // Simulate upload delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    const newFile = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: file.name,
+      url: URL.createObjectURL(file), // Create blob URL for session usage
+      size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
+      type: file.type,
+      created_at: new Date().toISOString()
+    };
+    MOCK_STORAGE_FILES.unshift(newFile);
+    return newFile;
+  },
+  list: async () => {
+    return [...MOCK_STORAGE_FILES];
+  },
+  delete: async (id: string) => {
+    const idx = MOCK_STORAGE_FILES.findIndex(f => f.id === id);
+    if (idx !== -1) MOCK_STORAGE_FILES.splice(idx, 1);
+    return true;
   }
 };
+
+export const getSystemStatus = () => true;
