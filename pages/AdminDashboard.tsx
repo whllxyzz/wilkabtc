@@ -21,6 +21,7 @@ const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Data States
   const [stats, setStats] = useState({ visitors: 0, news: 0, gallery: 0 });
@@ -42,7 +43,6 @@ const AdminDashboard: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   
-  // Settings Upload States
   const [heroFile, setHeroFile] = useState<File | null>(null);
   const [heroPreview, setHeroPreview] = useState<string | null>(null);
 
@@ -118,6 +118,11 @@ const AdminDashboard: React.FC = () => {
       authService.logout();
       navigate('/admin');
     }
+  };
+
+  const selectTab = (id: string) => {
+    setActiveTab(id);
+    setIsMobileMenuOpen(false);
   };
 
   const handleOpenModal = (item: any = null, type: string | null = null) => {
@@ -201,8 +206,26 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-slate-900 text-white fixed h-full overflow-y-auto hidden md:block z-50">
+      {/* Mobile Nav Toggle */}
+      <div className="md:hidden fixed top-4 left-4 z-[60]">
+        <button 
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-slate-900/40"
+        >
+          <i className={`fa-solid ${isMobileMenuOpen ? 'fa-xmark' : 'fa-bars-staggered'} text-lg`}></i>
+        </button>
+      </div>
+
+      {/* Mobile Menu Backdrop */}
+      {isMobileMenuOpen && (
+        <div 
+          className="md:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[55]"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar (Desktop & Mobile) */}
+      <aside className={`w-64 bg-slate-900 text-white fixed h-full overflow-y-auto z-[56] transition-transform duration-300 md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:block'}`}>
         <div className="p-8">
            <div className="flex items-center gap-3 mb-2">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black text-xs">S2</div>
@@ -214,7 +237,7 @@ const AdminDashboard: React.FC = () => {
             {filteredMenu.map(menu => (
                 <button 
                     key={menu.id}
-                    onClick={() => setActiveTab(menu.id)}
+                    onClick={() => selectTab(menu.id)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all ${activeTab === menu.id ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
                 >
                     <div className="flex items-center gap-3">
@@ -236,7 +259,7 @@ const AdminDashboard: React.FC = () => {
             <div className="flex items-center gap-4">
                <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight">{activeTab.replace('_', ' ')}</h1>
                {['news', 'gallery', 'agenda', 'eskul'].includes(activeTab) || (isAdmin && ['teachers', 'depts'].includes(activeTab)) ? (
-                  <button onClick={() => handleOpenModal()} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg">
+                  <button onClick={() => handleOpenModal()} className="hidden sm:block px-5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg">
                     + TAMBAH DATA
                   </button>
                ) : null}
@@ -254,6 +277,16 @@ const AdminDashboard: React.FC = () => {
                 </div>
             </div>
         </header>
+
+        {/* Mobile-only Add Button Floating */}
+        {['news', 'gallery', 'agenda', 'eskul'].includes(activeTab) || (isAdmin && ['teachers', 'depts'].includes(activeTab)) ? (
+            <button 
+              onClick={() => handleOpenModal()}
+              className="sm:hidden fixed bottom-6 right-6 w-16 h-16 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center z-[50] animate-bounce-slow"
+            >
+              <i className="fa-solid fa-plus text-xl"></i>
+            </button>
+        ) : null}
 
         {/* Tab Logic */}
         {!filteredMenu.find(m => m.id === activeTab) ? (
@@ -279,19 +312,19 @@ const AdminDashboard: React.FC = () => {
                 </div>
                 
                 {isAdmin && (
-                  <div className="md:col-span-3 bg-blue-600 p-10 rounded-[3rem] text-white flex flex-col md:flex-row justify-between items-center gap-8 mt-4">
-                     <div className="max-w-md">
+                  <div className="md:col-span-3 bg-blue-600 p-8 md:p-10 rounded-[2.5rem] md:rounded-[3rem] text-white flex flex-col md:flex-row justify-between items-center gap-8 mt-4">
+                     <div className="text-center md:text-left max-w-md">
                         <h3 className="text-2xl font-black mb-2">Halo Super Admin!</h3>
                         <p className="text-blue-100 text-sm opacity-80">Anda memiliki kendali penuh atas infrastruktur website. Gunakan Bot Telegram untuk monitoring real-time.</p>
                      </div>
-                     <button onClick={() => setActiveTab('tele_inbox')} className="px-10 py-4 bg-white text-blue-600 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:scale-105 transition-transform">Buka Konsol Bot</button>
+                     <button onClick={() => setActiveTab('tele_inbox')} className="w-full md:w-auto px-10 py-4 bg-white text-blue-600 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:scale-105 transition-transform">Buka Konsol Bot</button>
                   </div>
                 )}
             </div>
         ) : activeTab === 'settings' && isAdmin ? (
             <div className="max-w-4xl mx-auto space-y-8 animate-zoom-in pb-20">
                 {/* School Information Card */}
-                <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm space-y-8">
+                <div className="bg-white p-8 md:p-10 rounded-[2.5rem] md:rounded-[3rem] border border-slate-200 shadow-sm space-y-8">
                    <h3 className="text-xl font-black text-slate-900 flex items-center gap-3">
                       <div className="w-1.5 h-6 bg-blue-600 rounded-full"></div> Informasi Dasar Sekolah
                    </h3>
@@ -308,7 +341,7 @@ const AdminDashboard: React.FC = () => {
                 </div>
 
                 {/* Hero Content Card */}
-                <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm space-y-8">
+                <div className="bg-white p-8 md:p-10 rounded-[2.5rem] md:rounded-[3rem] border border-slate-200 shadow-sm space-y-8">
                    <h3 className="text-xl font-black text-slate-900 flex items-center gap-3">
                       <div className="w-1.5 h-6 bg-blue-600 rounded-full"></div> Konten Tampilan Hero
                    </h3>
@@ -346,7 +379,7 @@ const AdminDashboard: React.FC = () => {
                 </div>
 
                 {/* Features Card */}
-                <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm space-y-8">
+                <div className="bg-white p-8 md:p-10 rounded-[2.5rem] md:rounded-[3rem] border border-slate-200 shadow-sm space-y-8">
                    <h3 className="text-xl font-black text-slate-900 flex items-center gap-3">
                       <div className="w-1.5 h-6 bg-blue-600 rounded-full"></div> Fitur & Pengumuman
                    </h3>
@@ -357,7 +390,7 @@ const AdminDashboard: React.FC = () => {
                 </div>
 
                 {/* Telegram Bot Card */}
-                <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm space-y-8">
+                <div className="bg-white p-8 md:p-10 rounded-[2.5rem] md:rounded-[3rem] border border-slate-200 shadow-sm space-y-8">
                    <h3 className="text-xl font-black text-slate-900 flex items-center gap-3">
                       <div className="w-1.5 h-6 bg-blue-600 rounded-full"></div> Integrasi Bot Telegram
                    </h3>
@@ -373,7 +406,7 @@ const AdminDashboard: React.FC = () => {
                    </div>
                 </div>
 
-                <div className="sticky bottom-8 left-0 right-0">
+                <div className="sticky bottom-8 left-0 right-0 px-4 md:px-0">
                     <button 
                         onClick={handleSaveSettings} 
                         disabled={isSaving}
@@ -438,8 +471,8 @@ const AdminDashboard: React.FC = () => {
       {/* Shared Modal Editor */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[1000] flex items-center justify-center p-4" onClick={() => setIsModalOpen(false)}>
-           <div className="bg-white w-full max-w-xl rounded-[3rem] p-10 shadow-2xl animate-zoom-in max-h-[90vh] overflow-y-auto relative" onClick={(e) => e.stopPropagation()}>
-             <button onClick={() => setIsModalOpen(false)} className="absolute top-8 right-8 text-slate-400 hover:text-rose-600"><i className="fa-solid fa-xmark text-xl"></i></button>
+           <div className="bg-white w-full max-w-xl rounded-[2.5rem] md:rounded-[3rem] p-6 md:p-10 shadow-2xl animate-zoom-in max-h-[90vh] overflow-y-auto relative" onClick={(e) => e.stopPropagation()}>
+             <button onClick={() => setIsModalOpen(false)} className="absolute top-6 right-6 md:top-8 md:right-8 text-slate-400 hover:text-rose-600"><i className="fa-solid fa-xmark text-xl"></i></button>
 
              <h3 className="text-2xl font-black tracking-tight text-slate-900 mb-8 uppercase">Editor {formType}</h3>
 
